@@ -1,0 +1,6 @@
+{
+  "version": 2,
+  "routes": [
+    { "src": "/ipcheck", "dest": "/api/ipcheck" }
+  ]
+}
