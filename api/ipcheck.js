@@ -1,3 +1,4 @@
+console.log('Handler invoked');
 export default async function handler(req, res) {
   const { url } = req.query;
 
