@@ -5,13 +5,23 @@ export default async function handler(req, res) {
     return res.status(400).send('Missing URL');
   }
 
-  // Get client IP from x-forwarded-for or connection
-  const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.connection.remoteAddress;
+  // Extract IP from x-forwarded-for or connection
+  const rawIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+  const ip = rawIp ? rawIp.split(',')[0].trim() : null;
   const lang = req.headers['accept-language'] || 'en';
 
   try {
     const geoRes = await fetch(`http://ip-api.com/json/${ip}`);
     const geoData = await geoRes.json();
+
+    // DEBUG: show detected IP and country
+    console.log('Detected IP:', ip);
+    console.log('Geo Data:', geoData);
+
+    // For debugging: send info back in HTML (remove later)
+    if (!geoData || !geoData.country) {
+      return res.status(500).send(`Could not determine country for IP: ${ip}`);
+    }
 
     if (geoData.country === 'China') {
       const popupMessage = lang.startsWith('zh') || lang.startsWith('ja')
@@ -26,13 +36,15 @@ export default async function handler(req, res) {
           <meta charset="UTF-8">
           <title>VIP Required</title>
         </head>
-        <body style="background-color: black;">
+        <body style="background-color: black; color: white;">
+          <p>Detected IP: ${ip}</p>
+          <p>Country: ${geoData.country}</p>
           <script>
             if (confirm(${JSON.stringify(popupMessage)})) {
               window.location.reload();
             } else {
-              // Optionally, redirect away or do nothing
-              // window.location.href = 'https://example.com';
+              // Optionally redirect or stop
+              window.stop();
             }
           </script>
         </body>
@@ -44,7 +56,9 @@ export default async function handler(req, res) {
       return res.end();
     }
   } catch (error) {
-    // On error (e.g., geo API down), redirect anyway
+    console.error('Geo lookup failed:', error);
+
+    // On error, just redirect to url
     res.writeHead(302, { Location: url });
     return res.end();
   }
